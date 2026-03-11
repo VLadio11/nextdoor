@@ -1,0 +1,39 @@
+version: '3.9'
+
+# Development overrides — hot reload for backend, Vite dev server for frontend.
+# Run with: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  db:
+    ports:
+      - "5432:5432"
+
+  backend:
+    build: ./backend
+    volumes:
+      - ./backend:/app
+    environment:
+      DATABASE_URL: postgresql+asyncpg://nextdoor:nextdoor@db:5432/nextdoor
+      SIM_MODE: "true"
+      ENVIRONMENT: development
+      LOG_LEVEL: DEBUG
+    command: >
+      sh -c "
+        cd /app &&
+        alembic upgrade head &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_BASE: ""
+    command: sh -c "npm ci && npm run dev -- --host"
+    depends_on:
+      - backend
