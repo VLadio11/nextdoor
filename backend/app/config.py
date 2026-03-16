@@ -3,7 +3,7 @@ from pydantic import field_validator
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore", env_ignore_empty=True)
 
     # Database
     database_url: str = "postgresql+asyncpg://nextdoor:nextdoor@localhost:5432/nextdoor"
