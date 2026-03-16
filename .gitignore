@@ -12,6 +12,9 @@ build/
 node_modules/
 frontend/dist/
 frontend/.vite/
+# Prevent accidental root-level npm artifacts
+package-lock.json
+package.json
 
 # Environment
 .env
