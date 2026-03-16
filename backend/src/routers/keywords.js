@@ -1,49 +1,46 @@
 'use strict';
 
 const { Router } = require('express');
-const { v4: uuidv4 } = require('uuid');
-const { keywords } = require('../mockStore');
+const store = require('../store');
 
 const router = Router();
 
-// GET /api/keywords
-router.get('/', (_req, res) => {
-  const items = [...keywords.values()].sort((a, b) => b.created_at.localeCompare(a.created_at));
-  res.json(items);
+router.get('/', async (_req, res, next) => {
+  try { res.json(await store.listKeywords()); } catch (e) { next(e); }
 });
 
-// POST /api/keywords
-router.post('/', (req, res) => {
-  const { phrase, is_active = true } = req.body;
-  if (!phrase || !phrase.trim()) {
-    return res.status(422).json({ detail: 'phrase is required' });
-  }
-  const kw = { id: uuidv4(), phrase: phrase.trim().toLowerCase(), is_active, created_at: new Date().toISOString() };
-  keywords.set(kw.id, kw);
-  res.status(201).json(kw);
+router.post('/', async (req, res, next) => {
+  try {
+    const { phrase, is_active } = req.body;
+    if (!phrase || !phrase.trim()) {
+      return res.status(422).json({ detail: 'phrase is required' });
+    }
+    res.status(201).json(await store.createKeyword({ phrase, is_active }));
+  } catch (e) { next(e); }
 });
 
-// GET /api/keywords/:id
-router.get('/:id', (req, res) => {
-  const kw = keywords.get(req.params.id);
-  if (!kw) return res.status(404).json({ detail: 'Keyword not found' });
-  res.json(kw);
+router.get('/:id', async (req, res, next) => {
+  try {
+    const kw = await store.getKeyword(req.params.id);
+    if (!kw) return res.status(404).json({ detail: 'Keyword not found' });
+    res.json(kw);
+  } catch (e) { next(e); }
 });
 
-// PUT /api/keywords/:id
-router.put('/:id', (req, res) => {
-  const kw = keywords.get(req.params.id);
-  if (!kw) return res.status(404).json({ detail: 'Keyword not found' });
-  if (req.body.phrase !== undefined) kw.phrase = req.body.phrase.trim().toLowerCase();
-  if (req.body.is_active !== undefined) kw.is_active = req.body.is_active;
-  res.json(kw);
+router.put('/:id', async (req, res, next) => {
+  try {
+    const kw = await store.updateKeyword(req.params.id, req.body);
+    if (!kw) return res.status(404).json({ detail: 'Keyword not found' });
+    res.json(kw);
+  } catch (e) { next(e); }
 });
 
-// DELETE /api/keywords/:id
-router.delete('/:id', (req, res) => {
-  if (!keywords.has(req.params.id)) return res.status(404).json({ detail: 'Keyword not found' });
-  keywords.delete(req.params.id);
-  res.status(204).end();
+router.delete('/:id', async (req, res, next) => {
+  try {
+    const deleted = await store.deleteKeyword(req.params.id);
+    if (!deleted) return res.status(404).json({ detail: 'Keyword not found' });
+    res.status(204).end();
+  } catch (e) { next(e); }
 });
 
 module.exports = router;

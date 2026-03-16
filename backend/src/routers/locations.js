@@ -1,51 +1,46 @@
 'use strict';
 
 const { Router } = require('express');
-const { v4: uuidv4 } = require('uuid');
-const { locations } = require('../mockStore');
+const store = require('../store');
 
 const router = Router();
 
-// GET /api/locations
-router.get('/', (_req, res) => {
-  const items = [...locations.values()].sort((a, b) => b.created_at.localeCompare(a.created_at));
-  res.json(items);
+router.get('/', async (_req, res, next) => {
+  try { res.json(await store.listLocations()); } catch (e) { next(e); }
 });
 
-// POST /api/locations
-router.post('/', (req, res) => {
-  const { name, latitude, longitude, radius_km = 5.0, is_active = true } = req.body;
-  if (!name || latitude == null || longitude == null) {
-    return res.status(422).json({ detail: 'name, latitude, and longitude are required' });
-  }
-  const loc = { id: uuidv4(), name, latitude, longitude, radius_km, is_active, created_at: new Date().toISOString() };
-  locations.set(loc.id, loc);
-  res.status(201).json(loc);
+router.post('/', async (req, res, next) => {
+  try {
+    const { name, latitude, longitude, radius_km, is_active } = req.body;
+    if (!name || latitude == null || longitude == null) {
+      return res.status(422).json({ detail: 'name, latitude, and longitude are required' });
+    }
+    res.status(201).json(await store.createLocation({ name, latitude, longitude, radius_km, is_active }));
+  } catch (e) { next(e); }
 });
 
-// GET /api/locations/:id
-router.get('/:id', (req, res) => {
-  const loc = locations.get(req.params.id);
-  if (!loc) return res.status(404).json({ detail: 'Location not found' });
-  res.json(loc);
+router.get('/:id', async (req, res, next) => {
+  try {
+    const loc = await store.getLocation(req.params.id);
+    if (!loc) return res.status(404).json({ detail: 'Location not found' });
+    res.json(loc);
+  } catch (e) { next(e); }
 });
 
-// PUT /api/locations/:id
-router.put('/:id', (req, res) => {
-  const loc = locations.get(req.params.id);
-  if (!loc) return res.status(404).json({ detail: 'Location not found' });
-  const allowed = ['name', 'latitude', 'longitude', 'radius_km', 'is_active'];
-  for (const key of allowed) {
-    if (req.body[key] !== undefined) loc[key] = req.body[key];
-  }
-  res.json(loc);
+router.put('/:id', async (req, res, next) => {
+  try {
+    const loc = await store.updateLocation(req.params.id, req.body);
+    if (!loc) return res.status(404).json({ detail: 'Location not found' });
+    res.json(loc);
+  } catch (e) { next(e); }
 });
 
-// DELETE /api/locations/:id
-router.delete('/:id', (req, res) => {
-  if (!locations.has(req.params.id)) return res.status(404).json({ detail: 'Location not found' });
-  locations.delete(req.params.id);
-  res.status(204).end();
+router.delete('/:id', async (req, res, next) => {
+  try {
+    const deleted = await store.deleteLocation(req.params.id);
+    if (!deleted) return res.status(404).json({ detail: 'Location not found' });
+    res.status(204).end();
+  } catch (e) { next(e); }
 });
 
 module.exports = router;

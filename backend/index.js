@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const { settings } = require('./src/config');
 const { logger } = require('./src/logger');
+const { migrate } = require('./src/migrate');
 const { scheduler } = require('./src/scheduler');
 
 const locationsRouter = require('./src/routers/locations');
@@ -28,17 +29,26 @@ app.use(`${API}/system`, systemRouter);
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
-// 404
 app.use((_req, res) => res.status(404).json({ detail: 'Not Found' }));
-
-// Error handler
 app.use((err, _req, res, _next) => {
   logger.error('unhandled_error', { error: err.message });
   res.status(err.status || 500).json({ detail: err.message || 'Internal Server Error' });
 });
 
 const PORT = parseInt(process.env.PORT || '8000', 10);
-app.listen(PORT, () => {
-  logger.info('server_started', { port: PORT, sim_mode: settings.simMode });
-  scheduler.start();
+
+async function start() {
+  // Run DB migrations if DATABASE_URL is configured (no-op otherwise)
+  await migrate();
+
+  app.listen(PORT, () => {
+    const dbMode = settings.databaseUrl ? 'postgres' : 'mock (no DATABASE_URL)';
+    logger.info('server_started', { port: PORT, sim_mode: settings.simMode, db: dbMode });
+    scheduler.start();
+  });
+}
+
+start().catch((err) => {
+  logger.error('startup_failed', { error: err.message });
+  process.exit(1);
 });
