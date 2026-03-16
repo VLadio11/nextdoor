@@ -1,21 +1,11 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
-from app.config import settings
 from app.routers import alerts, keywords, locations, posts, recipients, system
 
 app = FastAPI(
     title="Nextdoor Monitor",
     description="Monitors Nextdoor posts for keyword matches and sends email alerts.",
     version="1.0.0",
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
 )
 
 API_PREFIX = "/api"
