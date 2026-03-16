@@ -1,57 +1,45 @@
 import uuid
+from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, HTTPException, status
 
-from app.deps import get_db
-from app.models.recipient import Recipient
+from app.mock_store import recipients
 from app.schemas.recipient import RecipientCreate, RecipientRead, RecipientUpdate
 
 router = APIRouter(prefix="/recipients", tags=["recipients"])
 
 
 @router.get("/", response_model=list[RecipientRead])
-async def list_recipients(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Recipient).order_by(Recipient.created_at.desc()))
-    return result.scalars().all()
+async def list_recipients():
+    return sorted(recipients.values(), key=lambda x: x["created_at"], reverse=True)
 
 
 @router.post("/", response_model=RecipientRead, status_code=status.HTTP_201_CREATED)
-async def create_recipient(body: RecipientCreate, db: AsyncSession = Depends(get_db)):
-    rec = Recipient(id=uuid.uuid4(), **body.model_dump())
-    db.add(rec)
-    await db.commit()
-    await db.refresh(rec)
+async def create_recipient(body: RecipientCreate):
+    rec = {"id": uuid.uuid4(), "created_at": datetime.now(timezone.utc), **body.model_dump()}
+    recipients[rec["id"]] = rec
     return rec
 
 
 @router.get("/{recipient_id}", response_model=RecipientRead)
-async def get_recipient(recipient_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
-    rec = await db.get(Recipient, recipient_id)
+async def get_recipient(recipient_id: uuid.UUID):
+    rec = recipients.get(recipient_id)
     if not rec:
         raise HTTPException(status_code=404, detail="Recipient not found")
     return rec
 
 
 @router.put("/{recipient_id}", response_model=RecipientRead)
-async def update_recipient(
-    recipient_id: uuid.UUID, body: RecipientUpdate, db: AsyncSession = Depends(get_db)
-):
-    rec = await db.get(Recipient, recipient_id)
+async def update_recipient(recipient_id: uuid.UUID, body: RecipientUpdate):
+    rec = recipients.get(recipient_id)
     if not rec:
         raise HTTPException(status_code=404, detail="Recipient not found")
-    for field, value in body.model_dump(exclude_unset=True).items():
-        setattr(rec, field, value)
-    await db.commit()
-    await db.refresh(rec)
+    rec.update(body.model_dump(exclude_unset=True))
     return rec
 
 
 @router.delete("/{recipient_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_recipient(recipient_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
-    rec = await db.get(Recipient, recipient_id)
-    if not rec:
+async def delete_recipient(recipient_id: uuid.UUID):
+    if recipient_id not in recipients:
         raise HTTPException(status_code=404, detail="Recipient not found")
-    await db.delete(rec)
-    await db.commit()
+    del recipients[recipient_id]
