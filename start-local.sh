@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# start-local.sh — Run backend (mock data, no DB) + frontend locally
+# start-local.sh — Run backend (Node.js) + frontend locally
 # Usage: ./start-local.sh
 set -e
 
@@ -7,22 +7,14 @@ REPO_ROOT="$(cd "$(dirname "$0")" && pwd)"
 BACKEND="$REPO_ROOT/backend"
 FRONTEND="$REPO_ROOT/frontend"
 
-# ── 1. Python venv + backend ─────────────────────────────────────────────────
-echo "▶ Setting up Python virtual environment..."
+# ── 1. Backend (Node.js) ──────────────────────────────────────────────────────
+echo "▶ Installing backend dependencies..."
 cd "$BACKEND"
-
-if [ ! -d ".venv" ]; then
-  python3 -m venv .venv
-fi
-source .venv/bin/activate
-pip install -q --upgrade pip
-pip install -q -r requirements.txt
+npm install --silent
 
 echo "▶ Starting backend on http://localhost:8000 ..."
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload &
+npm run dev &
 BACKEND_PID=$!
-
-deactivate
 
 # ── 2. Frontend ───────────────────────────────────────────────────────────────
 echo "▶ Installing frontend dependencies..."
@@ -40,7 +32,7 @@ echo ""
 echo "✅ Stack running:"
 echo "   Frontend  → http://localhost:5173"
 echo "   Backend   → http://localhost:8000"
-echo "   API docs  → http://localhost:8000/docs"
+echo "   API docs  → http://localhost:8000/api/system/status"
 echo ""
 echo "Press Ctrl+C to stop everything."
 wait $BACKEND_PID $FRONTEND_PID

@@ -1,0 +1,19 @@
+{
+  "name": "nextdoor-monitor-backend",
+  "version": "1.0.0",
+  "description": "Nextdoor Monitor backend — Node.js/Express",
+  "scripts": {
+    "dev": "node --watch index.js",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.8",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.13",
+    "pg": "^8.11.5",
+    "uuid": "^9.0.1"
+  }
+}
